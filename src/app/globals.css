@@ -1,0 +1,187 @@
+@import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700;800&family=Amiri:ital,wght@0,400;0,700;1,400&family=Aref+Ruqaa:wght@400;700&family=Cairo:wght@400;600;700&family=Marhey:wght@400;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Readex+Pro:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-amiri: 'Amiri', serif;
+  --font-readex: 'Readex Pro', sans-serif;
+  --font-ruqaa: 'Aref Ruqaa', serif;
+  --font-alexandria: 'Alexandria', sans-serif;
+  --font-tajawal: 'Tajawal', sans-serif;
+  --font-noto: 'Noto Naskh Arabic', serif;
+  --font-cairo: 'Cairo', sans-serif;
+  --font-marhey: 'Marhey', cursive;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  background-color: #080608;
+  color: #FAF4EB;
+  font-family: var(--font-alexandria), var(--font-readex), sans-serif;
+  direction: rtl;
+  text-align: right;
+  overflow-x: hidden;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Font Helper Classes */
+.font-ruqaa {
+  font-family: var(--font-ruqaa), serif;
+}
+
+.font-amiri {
+  font-family: var(--font-amiri), serif;
+}
+
+.font-tajawal {
+  font-family: var(--font-tajawal), sans-serif;
+}
+
+.font-noto {
+  font-family: var(--font-noto), serif;
+}
+
+.font-alexandria {
+  font-family: var(--font-alexandria), sans-serif;
+}
+
+.font-cairo {
+  font-family: var(--font-cairo), sans-serif;
+}
+
+.font-marhey {
+  font-family: var(--font-marhey), cursive;
+}
+
+/* Luxury Smooth Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0B080A;
+}
+::-webkit-scrollbar-thumb {
+  background: #C5A059;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #E5C378;
+}
+
+/* Luxury Paper Texture & Surfaces */
+.luxury-card-surface {
+  background: linear-gradient(135deg, rgba(28, 20, 24, 0.85) 0%, rgba(18, 12, 16, 0.95) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.luxury-light-card {
+  background: #FDFBF7;
+  color: #1F1B16;
+  border: 1px solid #DCD3C0;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(212, 175, 55, 0.35);
+}
+
+/* Gold Text & Embellishments */
+.gold-text-gradient {
+  background: linear-gradient(135deg, #F3E3B6 0%, #D4AF37 50%, #AA822A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-subtle-border {
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.gold-double-border {
+  border: 3px double rgba(212, 175, 55, 0.5);
+}
+
+/* Wax Seal Tactile Effect */
+.wax-seal-button {
+  background: radial-gradient(circle at 35% 35%, #C92A42 0%, #8A1325 55%, #560815 100%);
+  box-shadow: 
+    0 8px 24px rgba(138, 19, 37, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.35),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.6),
+    0 0 0 3px rgba(138, 19, 37, 0.3);
+  border-radius: 9999px;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.wax-seal-gold {
+  background: radial-gradient(circle at 35% 35%, #F5DE9C 0%, #C5A059 50%, #7D5D18 100%);
+  box-shadow: 
+    0 8px 24px rgba(197, 160, 89, 0.45),
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.5),
+    0 0 0 3px rgba(197, 160, 89, 0.25);
+  border-radius: 9999px;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.wax-seal-button:hover, .wax-seal-gold:hover {
+  transform: scale(1.06) rotate(-2deg);
+}
+
+/* Realistic Envelope Geometry */
+.envelope-back {
+  background: linear-gradient(180deg, #1C0F14 0%, #2A141D 100%);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7);
+}
+
+.envelope-flap {
+  clip-path: polygon(0 0, 100% 0, 50% 55%);
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: top;
+}
+
+/* Arabesque Decorative Borders */
+.arabesque-corner-tl {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 48px;
+  height: 48px;
+  border-top: 2px solid rgba(212, 175, 55, 0.5);
+  border-right: 2px solid rgba(212, 175, 55, 0.5);
+  pointer-events: none;
+}
+
+.arabesque-corner-br {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  width: 48px;
+  height: 48px;
+  border-bottom: 2px solid rgba(212, 175, 55, 0.5);
+  border-left: 2px solid rgba(212, 175, 55, 0.5);
+  pointer-events: none;
+}
+
+/* Input Fields */
+.luxury-input {
+  background: rgba(22, 16, 20, 0.75);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: #FAF4EB;
+  transition: all 0.3s ease;
+}
+
+.luxury-input:focus {
+  border-color: #D4AF37;
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.25);
+  outline: none;
+}
