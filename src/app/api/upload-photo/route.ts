@@ -14,7 +14,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // 1. First attempt: Forward to Catbox free permanent cloud image host
+    // 1. First attempt: FreeImage.host API (fast, permanent, works from AWS/Netlify/Edge)
+    try {
+      const freeImgData = new FormData();
+      freeImgData.append("key", "6d207e02198a847aa98d0a2a901485a5");
+      freeImgData.append("action", "upload");
+      freeImgData.append("source", file, file.name || "polaroid.jpg");
+      freeImgData.append("format", "json");
+
+      const fiRes = await fetch("https://freeimage.host/api/1/upload", {
+        method: "POST",
+        body: freeImgData,
+      });
+
+      if (fiRes.ok) {
+        const fiJson = await fiRes.json();
+        if (fiJson?.image?.url) {
+          return NextResponse.json({ url: fiJson.image.url });
+        }
+      }
+    } catch (fiErr) {
+      console.warn("FreeImage.host upload failed, trying Catbox:", fiErr);
+    }
+
+    // 2. Second attempt: Forward to Catbox free permanent cloud image host
     try {
       const uploadData = new FormData();
       uploadData.append("reqtype", "fileupload");
@@ -38,7 +61,7 @@ export async function POST(req: Request) {
       console.warn("Catbox upload failed, attempting local fallback:", cloudErr);
     }
 
-    // 2. Second attempt: Local filesystem storage in public/uploads (for local/self-hosted environments)
+    // 3. Third attempt: Local filesystem storage in public/uploads (for local/self-hosted environments)
     try {
       const publicUploadsDir = path.join(process.cwd(), "public", "uploads");
       if (!fs.existsSync(publicUploadsDir)) {

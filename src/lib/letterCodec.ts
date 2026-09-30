@@ -1,4 +1,5 @@
 import { LoveLetterData } from "../components/experience/HandcraftedLoveLetter";
+import * as fflate from "fflate";
 
 /**
  * Compact representation with single/two-character keys for minimal URL length
@@ -26,9 +27,29 @@ interface CompactPayload {
   k?: string; // passcode
 }
 
+function bytesToBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function base64UrlToBytes(str: string): Uint8Array {
+  let b64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  while (b64.length % 4) b64 += "=";
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
 /**
  * Encodes LoveLetterData into a compact, compressed, URL-safe string.
- * Uses native CompressionStream (gzip) with base64url encoding.
+ * Uses high-speed, zero-dependency fflate gzip.
  */
 export async function encodeLoveLetterToUrlHash(data: LoveLetterData): Promise<string> {
   // Convert to compact schema
@@ -64,32 +85,19 @@ export async function encodeLoveLetterToUrlHash(data: LoveLetterData): Promise<s
 
   const json = JSON.stringify(compact);
 
-  // 1. Try gzip CompressionStream
+  // 1. Primary: fflate pure JS Gzip (ultra-fast, works across ALL browsers & WebViews)
   try {
-    if (typeof CompressionStream !== "undefined") {
-      const stream = new Blob([new TextEncoder().encode(json)])
-        .stream()
-        .pipeThrough(new CompressionStream("gzip"));
-      const buffer = await new Response(stream).arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      let binary = "";
-      for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      return "gz_" + btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    }
-  } catch (e) {
-    console.warn("gzip compression stream unavailable, falling back", e);
+    const u8 = fflate.strToU8(json);
+    const gz = fflate.gzipSync(u8, { level: 9 });
+    return "gz_" + bytesToBase64Url(gz);
+  } catch (err) {
+    console.warn("fflate gzip failed, trying fallback:", err);
   }
 
-  // 2. Safe UTF-8 base64url fallback
+  // 2. Fallback: native base64url
   try {
-    const utf8Bytes = new TextEncoder().encode(json);
-    let binary = "";
-    for (let i = 0; i < utf8Bytes.length; i++) {
-      binary += String.fromCharCode(utf8Bytes[i]);
-    }
-    return "b64_" + btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const u8 = fflate.strToU8(json);
+    return "b64_" + bytesToBase64Url(u8);
   } catch (e) {
     return "raw_" + encodeURIComponent(json);
   }
@@ -103,8 +111,8 @@ function normalizeToLoveLetterData(obj: any): LoveLetterData {
 
   if (isCompact) {
     return {
-      recipientName: obj.r || "سارة",
-      senderName: obj.s || "أحمد",
+      recipientName: obj.r || "",
+      senderName: obj.s || "",
       specialDate: obj.d || "",
       specialDateTitle: obj.t || "",
       songTitle: obj.st || "أغنيتنا المفضلة",
@@ -129,8 +137,8 @@ function normalizeToLoveLetterData(obj: any): LoveLetterData {
   }
 
   return {
-    recipientName: obj.recipientName || "سارة",
-    senderName: obj.senderName || "أحمد",
+    recipientName: obj.recipientName || "",
+    senderName: obj.senderName || "",
     specialDate: obj.specialDate || "",
     specialDateTitle: obj.specialDateTitle || "",
     songTitle: obj.songTitle || "أغنيتنا المفضلة",
@@ -162,26 +170,28 @@ export async function decodeLoveLetterFromUrlHash(str: string): Promise<LoveLett
 
   try {
     if (cleanStr.startsWith("gz_")) {
-      const base64 = cleanStr.slice(3).replace(/-/g, "+").replace(/_/g, "/");
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
+      const bytes = base64UrlToBytes(cleanStr.slice(3));
+      // Primary: fflate gunzip
+      try {
+        const decompressed = fflate.gunzipSync(bytes);
+        const text = fflate.strFromU8(decompressed);
+        const parsed = JSON.parse(text);
+        return normalizeToLoveLetterData(parsed);
+      } catch (ffErr) {
+        // Fallback to DecompressionStream if available
+        if (typeof DecompressionStream !== "undefined") {
+          const stream = new Blob([bytes as any]).stream().pipeThrough(new DecompressionStream("gzip"));
+          const text = await new Response(stream).text();
+          const parsed = JSON.parse(text);
+          return normalizeToLoveLetterData(parsed);
+        }
+        throw ffErr;
       }
-      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
-      const text = await new Response(stream).text();
-      const parsed = JSON.parse(text);
-      return normalizeToLoveLetterData(parsed);
     }
 
     if (cleanStr.startsWith("b64_")) {
-      const base64 = cleanStr.slice(4).replace(/-/g, "+").replace(/_/g, "/");
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      const text = new TextDecoder().decode(bytes);
+      const bytes = base64UrlToBytes(cleanStr.slice(4));
+      const text = fflate.strFromU8(bytes);
       const parsed = JSON.parse(text);
       return normalizeToLoveLetterData(parsed);
     }

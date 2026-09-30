@@ -73,34 +73,11 @@ export default function HomePage() {
   const handleCopyShare = async () => {
     setIsSharing(true);
     try {
-      // 1. Save to server to get permanent short ID
-      let shortId = "";
-      try {
-        const apiRes = await fetch("/api/gift", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-        if (apiRes.ok) {
-          const resData = await apiRes.json();
-          if (resData.id) {
-            shortId = resData.id;
-          }
-        }
-      } catch (err) {
-        console.warn("API gift save error:", err);
-      }
-
-      // 2. Generate fallback hash
+      // 1. Generate the self-contained compact compressed payload
       const hashPayload = await encodeLoveLetterToUrlHash(data);
 
-      // 3. Create clean short link
-      let url = "";
-      if (shortId) {
-        url = `${window.location.origin}/gift/${shortId}`;
-      } else {
-        url = `${window.location.origin}/gift/shared#d=${hashPayload}`;
-      }
+      // 2. Create clean, universal share link
+      const url = `${window.location.origin}/gift/shared?d=${hashPayload}`;
 
       setShareUrl(url);
       setShareModalOpen(true);

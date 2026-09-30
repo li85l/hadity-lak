@@ -317,34 +317,11 @@ export function LoveLetterStudio() {
   const handleShare = async () => {
     setIsGeneratingLink(true);
     try {
-      // 1. Save to server & cloud to generate a permanent short ID
-      let shortId = "";
-      try {
-        const apiRes = await fetch("/api/gift", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-        if (apiRes.ok) {
-          const resData = await apiRes.json();
-          if (resData.id) {
-            shortId = resData.id;
-          }
-        }
-      } catch (apiErr) {
-        console.warn("API gift save failed, fallback to compact URL:", apiErr);
-      }
-
-      // 2. Generate compact fallback hash
+      // 1. Generate the self-contained compact compressed payload
       const hashPayload = await encodeLoveLetterToUrlHash(data);
 
-      // 3. Primary URL is clean and short: /gift/{shortId}
-      let url = "";
-      if (shortId) {
-        url = `${window.location.origin}/gift/${shortId}`;
-      } else {
-        url = `${window.location.origin}/gift/shared#d=${hashPayload}`;
-      }
+      // 2. Build the universal share URL (includes query param ?d= for 100% data preservation)
+      const url = `${window.location.origin}/gift/shared?d=${hashPayload}`;
 
       setShareUrl(url);
       setShareModalOpen(true);
