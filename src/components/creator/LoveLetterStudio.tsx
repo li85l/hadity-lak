@@ -42,11 +42,52 @@ import {
 import { YouTubeAudioPlayer } from "../common/YouTubeAudioPlayer";
 import { encodeLoveLetterToUrlHash } from "../../lib/letterCodec";
 
+// Compress image in browser to lightweight JPEG blob before sending to server
+async function compressImageToBlob(file: File, maxWidth = 1200, quality = 0.8): Promise<Blob> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => resolve(blob || file),
+          "image/jpeg",
+          quality
+        );
+      };
+      img.onerror = () => resolve(file);
+      img.src = (e.target?.result as string) || "";
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
 // Upload photo to cloud for permanent, short-URL hosting with local compression fallback
 async function uploadPhotoToServer(file: File): Promise<string> {
   try {
+    // 1. Client-side compression first to avoid 413 Payload Too Large and ensure fast upload
+    const compressedBlob = await compressImageToBlob(file, 1200, 0.8);
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", compressedBlob, file.name.replace(/\.[^/.]+$/, ".jpg") || "photo.jpg");
+
     const res = await fetch("/api/upload-photo", {
       method: "POST",
       body: fd,
@@ -58,8 +99,8 @@ async function uploadPhotoToServer(file: File): Promise<string> {
   } catch (err) {
     console.warn("Cloud photo upload fallback to compression", err);
   }
-  // Local fallback
-  return compressImage(file, 800, 0.75);
+  // Local fallback with smaller dimension so URL never explodes
+  return compressImage(file, 400, 0.6);
 }
 
 // Compress user-uploaded photos to preserve quality while fitting into localStorage
@@ -276,8 +317,35 @@ export function LoveLetterStudio() {
   const handleShare = async () => {
     setIsGeneratingLink(true);
     try {
+      // 1. Save to server & cloud to generate a permanent short ID
+      let shortId = "";
+      try {
+        const apiRes = await fetch("/api/gift", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        if (apiRes.ok) {
+          const resData = await apiRes.json();
+          if (resData.id) {
+            shortId = resData.id;
+          }
+        }
+      } catch (apiErr) {
+        console.warn("API gift save failed, fallback to compact URL:", apiErr);
+      }
+
+      // 2. Generate compact fallback hash
       const hashPayload = await encodeLoveLetterToUrlHash(data);
-      const url = `${window.location.origin}/gift/shared#d=${hashPayload}`;
+
+      // 3. Primary URL is clean and short: /gift/{shortId}
+      let url = "";
+      if (shortId) {
+        url = `${window.location.origin}/gift/${shortId}`;
+      } else {
+        url = `${window.location.origin}/gift/shared#d=${hashPayload}`;
+      }
+
       setShareUrl(url);
       setShareModalOpen(true);
 
@@ -355,10 +423,11 @@ export function LoveLetterStudio() {
             <button
               type="button"
               onClick={handleShare}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B8902A] text-[#1E1A16] text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all"
+              disabled={isGeneratingLink}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B8902A] text-[#1E1A16] text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
             >
               <Share2 className="w-3.5 h-3.5" />
-              <span>{copiedLink ? "تم النسخ!" : "مشاركة الرابط"}</span>
+              <span>{isGeneratingLink ? "جارٍ التجهيز..." : copiedLink ? "تم النسخ!" : "مشاركة الرابط"}</span>
             </button>
           </div>
         </div>
@@ -1085,10 +1154,11 @@ export function LoveLetterStudio() {
               <button
                 type="button"
                 onClick={handleShare}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#B8902A] text-[#1E1A16] font-bold text-sm shadow-xl transition-all flex items-center justify-center gap-2"
+                disabled={isGeneratingLink}
+                className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#B8902A] text-[#1E1A16] font-bold text-sm shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <Share2 className="w-4 h-4" />
-                <span>{copiedLink ? "تم نسخ الرابط!" : "نسخ الرابط لإرساله لها"}</span>
+                <span>{isGeneratingLink ? "جارٍ حفظ وتجهيز الرابط..." : copiedLink ? "تم نسخ الرابط!" : "نسخ الرابط لإرساله لها"}</span>
               </button>
             </div>
 
